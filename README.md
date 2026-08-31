@@ -36,16 +36,10 @@ Arch (AUR):
 yay -S bb-auth-git
 ```
 
-Nix:
-
-```bash
-nix profile install github:anthonyhab/bb-auth#bb-auth
-```
-
 Manual:
 
 ```bash
-git clone https://github.com/anthonyhab/bb-auth
+git clone https://github.com/branrgx/bb-auth
 cd bb-auth
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j"$(nproc)"

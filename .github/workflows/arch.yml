@@ -4,6 +4,14 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+env:
+  QT_QPA_PLATFORM: offscreen
+  QT_QPA_PLATFORMTHEME: none
+  QT_STYLE_OVERRIDE: Fusion
+
 jobs:
   core-only:
     runs-on: ubuntu-latest
@@ -11,7 +19,7 @@ jobs:
       image: archlinux:base-devel
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install dependencies
         run: |
@@ -36,7 +44,7 @@ jobs:
       image: archlinux:base-devel
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install dependencies
         run: |

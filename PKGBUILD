@@ -1,10 +1,10 @@
-# Maintainer: anthonyhab
+# Maintainer: branrgx
 pkgname=bb-auth-git
 pkgver=r43.fc40397
 pkgrel=1
 pkgdesc="Unified polkit, keyring, and pinentry authentication daemon"
 arch=('x86_64')
-url="https://github.com/anthonyhab/bb-auth"
+url="https://github.com/branrgx/bb-auth"
 license=('BSD-3-Clause')
 depends=(
     'qt6-base'
@@ -24,7 +24,7 @@ optdepends=(
 provides=('bb-auth')
 conflicts=('bb-auth')
 replaces=('noctalia-auth-git' 'noctalia-polkit-git' 'noctalia-unofficial-auth-agent-git')
-source=("${pkgname}::git+https://github.com/anthonyhab/bb-auth.git")
+source=("${pkgname}::git+https://github.com/branrgx/bb-auth.git")
 sha256sums=('SKIP')
 
 pkgver() {
