@@ -1,0 +1,155 @@
+#include "common/IpcClient.hpp"
+#include "common/Paths.hpp"
+#include "core/Agent.hpp"
+#include "modes/daemon.hpp"
+#include "modes/pinentry.hpp"
+
+#include <QCommandLineParser>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QTextStream>
+
+#include <print>
+
+// Forward declarations for mode runners
+namespace modes {
+    int runKeyring(int argc, char* argv[]);
+    int runPinentry();
+}
+
+namespace {
+
+    enum class Mode {
+        Daemon,
+        Keyring,
+        Pinentry,
+        Cli
+    };
+
+    Mode detectModeFromArgv0(const QString& argv0) {
+        const QString basename = QFileInfo(argv0).fileName();
+
+        if (basename.contains("pinentry", Qt::CaseInsensitive))
+            return Mode::Pinentry;
+
+        if (basename.contains("keyring", Qt::CaseInsensitive))
+            return Mode::Keyring;
+
+        return Mode::Cli; // Default to CLI mode (which includes daemon)
+    }
+
+    int runCli(QCoreApplication& app, int argc, char* argv[], const QString& socketPathOverride) {
+        QCommandLineParser parser;
+        parser.setApplicationDescription("BB Auth - Unified authentication agent");
+        parser.addHelpOption();
+        parser.addVersionOption();
+
+        // Mode options
+        QCommandLineOption optDaemon(QStringList{"daemon", "d"}, "Run as daemon (polkit agent + IPC server).");
+        QCommandLineOption optKeyring(QStringList{"keyring"}, "Run as keyring prompter (GCR replacement).");
+        QCommandLineOption optPinentry(QStringList{"pinentry"}, "Run as GPG pinentry.");
+
+        // CLI options (for interacting with running daemon)
+        QCommandLineOption optPing(QStringList{"ping"}, "Check if the daemon is reachable.");
+        QCommandLineOption optNext(QStringList{"next"}, "Fetch the next pending request.");
+        QCommandLineOption optRespond(QStringList{"respond"}, "Respond to a request (cookie).", "cookie");
+        QCommandLineOption optCancel(QStringList{"cancel"}, "Cancel a request (cookie).", "cookie");
+        QCommandLineOption optSocket(QStringList{"socket", "s"}, "Override socket path.", "path");
+
+        parser.addOption(optDaemon);
+        parser.addOption(optKeyring);
+        parser.addOption(optPinentry);
+        parser.addOption(optPing);
+        parser.addOption(optNext);
+        parser.addOption(optRespond);
+        parser.addOption(optCancel);
+        parser.addOption(optSocket);
+
+        parser.process(app);
+
+        const QString socketPath = parser.isSet(optSocket) ? parser.value(optSocket) : (!socketPathOverride.isEmpty() ? socketPathOverride : bb::socketPath());
+
+        // Check for explicit mode switches
+        if (parser.isSet(optDaemon)) {
+            return modes::runDaemon(app, socketPath);
+        }
+
+        if (parser.isSet(optKeyring)) {
+            return modes::runKeyring(argc, argv);
+        }
+
+        if (parser.isSet(optPinentry)) {
+            return modes::runPinentry();
+        }
+
+        // CLI commands for interacting with daemon
+        if (parser.isSet(optPing)) {
+            bb::IpcClient client(socketPath);
+            return client.ping() ? 0 : 1;
+        }
+
+        if (parser.isSet(optNext)) {
+            bb::IpcClient client(socketPath);
+            auto          response = client.sendRequest(QJsonObject{{"type", "next"}}, 1000);
+            if (response) {
+                const auto out = QJsonDocument(*response).toJson(QJsonDocument::Compact);
+                fprintf(stdout, "%s\n", out.constData());
+            }
+            return response ? 0 : 1;
+        }
+
+        if (parser.isSet(optRespond)) {
+            const QString cookie = parser.value(optRespond);
+            QTextStream   stdinStream(stdin);
+            const QString password = stdinStream.readLine();
+
+            bb::IpcClient client(socketPath);
+            auto          response = client.sendRequest(QJsonObject{{"type", "session.respond"}, {"id", cookie}, {"response", password}}, 1000);
+            return (response && response->value("type").toString() == "ok") ? 0 : 1;
+        }
+
+        if (parser.isSet(optCancel)) {
+            const QString cookie = parser.value(optCancel);
+
+            bb::IpcClient client(socketPath);
+            auto          response = client.sendRequest(QJsonObject{{"type", "session.cancel"}, {"id", cookie}}, 1000);
+            return (response && response->value("type").toString() == "ok") ? 0 : 1;
+        }
+
+        // No explicit mode or CLI command - default to daemon
+        return modes::runDaemon(app, socketPath);
+    }
+
+} // namespace
+
+int main(int argc, char* argv[]) {
+    // Detect mode from argv[0] (symlink detection)
+    const QString argv0 = QString::fromLocal8Bit(argv[0]);
+    const Mode    mode  = detectModeFromArgv0(argv0);
+
+    switch (mode) {
+        case Mode::Pinentry:
+            // Pinentry mode doesn't need Qt - it's stdin/stdout based
+            return modes::runPinentry();
+
+        case Mode::Keyring:
+            // Keyring mode uses GLib main loop, not Qt
+            return modes::runKeyring(argc, argv);
+
+        case Mode::Daemon:
+        case Mode::Cli:
+            // CLI and daemon modes use Qt
+            break;
+    }
+
+    QCoreApplication app(argc, argv);
+    app.setApplicationName("bb-auth");
+#ifdef BB_AUTH_VERSION
+    app.setApplicationVersion(BB_AUTH_VERSION);
+#else
+    app.setApplicationVersion("0.1.3");
+#endif
+
+    return runCli(app, argc, argv, {});
+}

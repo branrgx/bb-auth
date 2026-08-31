@@ -1,0 +1,46 @@
+# Prerequisites
+*.d
+!assets/providers.d/
+!assets/providers.d/*.json
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+.vscode/
+.cache/
+build/
+build-*/
+build-dev/
+build-analysis/
+build-check/
+build-daemon-smoke.log
+result
+
+compile_commands.json
