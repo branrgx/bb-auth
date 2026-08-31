@@ -15,6 +15,7 @@
 #include <print>
 #include <string>
 #include <QStringView>
+#include <unistd.h>
 
 namespace {
 

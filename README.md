@@ -6,6 +6,24 @@ Unified Linux authentication daemon for:
 - GNOME Keyring prompts
 - GPG pinentry
 
+> **Fork notice:** This repository is a personal fork of [bb-auth](https://github.com/anthonyhab/bb-auth), originally created by Anthony Hab. The original project and its work are not mine. This fork is maintained independently and is not an official continuation or replacement for upstream.
+
+This fork is maintained primarily as the authentication backend for the [BB Auth plugin](https://github.com/branrgx/noctalia-plugins/tree/main/bb-auth) in my [Noctalia plugin collection](https://github.com/branrgx/noctalia-plugins). This repository provides the daemon and provider IPC, while the Noctalia v5 plugin provides the user-facing authentication interface. Development here may therefore prioritize compatibility, fixes, and improvements needed by that integration. This describes the maintenance direction of this fork; the original bb-auth project was not created specifically for Noctalia.
+
+```text
+Polkit / pinentry / keyring
+          │
+          ▼
+       bb-auth
+          │
+          │ Provider IPC
+          ▼
+ Noctalia BB Auth plugin
+          │
+          ▼
+ Authentication panel
+```
+
 It prefers an external UI provider when available, and falls back to the built-in Qt prompt when not.
 
 ![Fallback prompt](assets/screenshot.png)
