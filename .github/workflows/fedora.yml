@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     container: fedora:44
     steps:
+      - name: Install Git for checkout
+        run: dnf -y install git
       - uses: actions/checkout@v7
       - name: Install build dependencies
         run: |
@@ -55,4 +57,3 @@ jobs:
           test -f /usr/lib/systemd/user/bb-auth.service
           test -f /usr/share/dbus-1/services/org.bb.auth.service
           test -f /usr/share/bb-auth/org.gnome.keyring.SystemPrompter.service
-
