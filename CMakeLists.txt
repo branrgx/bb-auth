@@ -6,6 +6,8 @@ string(STRIP ${VER_RAW} VER)
 
 project(bb-auth VERSION ${VER} LANGUAGES C CXX)
 
+include(GNUInstallDirs)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
@@ -126,7 +128,8 @@ target_compile_definitions(bb-auth
 set(BB_AUTH_GCR_PROMPTER_BINARY "/usr/lib/gcr-prompter" CACHE STRING "Path to the system gcr-prompter binary")
 target_compile_definitions(bb-auth PRIVATE GCR_PROMPTER_BINARY="\\"${BB_AUTH_GCR_PROMPTER_BINARY}\\"")
 
-include(GNUInstallDirs)
+set(BB_AUTH_SYSTEMD_USER_UNIT_DIR "${CMAKE_INSTALL_LIBDIR}/systemd/user"
+    CACHE PATH "Installation directory for systemd user units")
 
 set(LIBEXECDIR ${CMAKE_INSTALL_FULL_LIBEXECDIR})
 set(DATADIR ${CMAKE_INSTALL_FULL_DATADIR})
@@ -262,7 +265,7 @@ install(CODE "
 
 # Install systemd user service
 install(FILES ${CMAKE_BINARY_DIR}/bb-auth.service
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/systemd/user")
+        DESTINATION "${BB_AUTH_SYSTEMD_USER_UNIT_DIR}")
 
 # Install D-Bus service file
 install(FILES ${CMAKE_BINARY_DIR}/bb-auth-dbus.service

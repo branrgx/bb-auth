@@ -1,5 +1,7 @@
 # bb-auth
 
+[![Copr build status](https://copr.fedorainfracloud.org/coprs/branrgx/bb-auth/package/bb-auth/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/branrgx/bb-auth/package/bb-auth/)
+
 Unified Linux authentication daemon for:
 
 - polkit (`pkexec`)
@@ -30,11 +32,14 @@ It prefers an external UI provider when available, and falls back to the built-i
 
 ## Install
 
-Arch (AUR):
+Fedora (COPR):
 
 ```bash
-yay -S bb-auth-git
+sudo dnf copr enable branrgx/bb-auth
+sudo dnf install bb-auth
 ```
+
+Fedora packaging and release automation: [Fedora / COPR](docs/FEDORA_COPR.md).
 
 Manual:
 

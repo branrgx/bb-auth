@@ -1,0 +1,60 @@
+name: Fedora validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Install Git for checkout
+        run: dnf -y install git
+      - uses: actions/checkout@v7
+      - name: Install build dependencies
+        run: |
+          dnf -y install rpm-build rpmdevtools dnf-plugins-core git diffutils
+          dnf -y builddep bb-auth.spec
+      - name: Validate version and prepare sources
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          version=$(cat VERSION)
+          spec_version=$(rpmspec -q --qf '%{VERSION}\n' bb-auth.spec | head -n1)
+          test "$version" = "$spec_version"
+          mkdir -p /tmp/rpmbuild/{SOURCES,SPECS,BUILD,BUILDROOT,RPMS,SRPMS}
+          if [[ "$GITHUB_EVENT_NAME" == release ]]; then
+            test "$RELEASE_TAG" = "v$version"
+            spectool -g -C /tmp/rpmbuild/SOURCES bb-auth.spec
+            # Ensure the tag archive matches the checkout being validated.
+            mkdir /tmp/release-source
+            tar -xf "/tmp/rpmbuild/SOURCES/bb-auth-$version.tar.gz" -C /tmp/release-source
+            git archive --prefix="bb-auth-$version/" HEAD | tar -x -C /tmp
+            diff -r "/tmp/bb-auth-$version" "/tmp/release-source/bb-auth-$version"
+          else
+            git archive --prefix="bb-auth-$version/" HEAD | gzip > "/tmp/rpmbuild/SOURCES/bb-auth-$version.tar.gz"
+          fi
+      - name: Build RPM and run tests
+        run: rpmbuild -ba --define '_topdir /tmp/rpmbuild' bb-auth.spec
+      - name: Install RPM and check installed paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          dnf -y install /tmp/rpmbuild/RPMS/*/bb-auth-[0-9]*.rpm
+          test -x /usr/libexec/bb-auth
+          test -x /usr/libexec/bb-auth-fallback
+          test -x /usr/libexec/bb-auth-bootstrap
+          test "$(readlink /usr/libexec/pinentry-bb)" = bb-auth
+          test "$(readlink /usr/libexec/bb-keyring-prompter)" = bb-auth
+          test -f /usr/lib/systemd/user/bb-auth.service
+          test -f /usr/share/dbus-1/services/org.bb.auth.service
+          test -f /usr/share/bb-auth/org.gnome.keyring.SystemPrompter.service

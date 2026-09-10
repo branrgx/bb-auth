@@ -1,0 +1,30 @@
+name: COPR release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    uses: ./.github/workflows/fedora.yml
+
+  copr:
+    needs: validate
+    if: github.event_name == 'release' && !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify COPR of the validated tag
+        env:
+          COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$COPR_WEBHOOK_URL" || { echo 'Missing COPR_WEBHOOK_URL secret'; exit 1; }
+          jq '{ref: .release.tag_name, ref_type: "tag", repository: .repository, sender: .sender, master_branch: .repository.default_branch}' \
+            "$GITHUB_EVENT_PATH" > /tmp/copr-event.json
+          curl --fail-with-body --silent --show-error --connect-timeout 15 --max-time 60 \
+            -H 'Content-Type: application/json' -H 'X-GitHub-Event: create' \
+            --data-binary @/tmp/copr-event.json "$COPR_WEBHOOK_URL"

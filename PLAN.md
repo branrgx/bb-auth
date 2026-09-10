@@ -181,6 +181,8 @@ Do not:
 
 ## Changelog Notes
 
+- 2026-09-10: Added tag-based Fedora RPM packaging, configurable systemd user-unit installation, and Fedora release validation before notifying COPR. Local build gates remain pending until development dependencies are available.
+
 - 2026-02-18: AUR packaging switched to deterministic minimal default (`BB_AUTH_GTK_FALLBACK=OFF`), with optional GTK fallback build via explicit opt-in.
 - 2026-02-18: Removed in-tree GTK provider build/install from core; core packaging/CI now validates minimal Qt-first architecture.
 - 2026-02-18: Added provider conformance test suite and external provider packaging guide.
