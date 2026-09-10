@@ -27,6 +27,7 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           version=$(cat VERSION)
           spec_version=$(rpmspec -q --qf '%{VERSION}\n' bb-auth.spec | head -n1)
           test "$version" = "$spec_version"
