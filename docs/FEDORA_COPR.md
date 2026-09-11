@@ -37,16 +37,17 @@ and `Version` in the spec together, commit, then create a GitHub release with
 the matching `vX.Y.Z` tag. Both workflows must exist in that tagged commit.
 
 `.github/workflows/fedora.yml` builds, tests, and installs an RPM in Fedora 44
-on pushes to `main` and pull requests. It also exposes `workflow_call` so the
-release workflow can reuse the same validation.
+on pushes to `main` and pull requests.
 
-`.github/workflows/copr-release.yml` runs when a release is published. It first
-calls `fedora.yml`, which downloads the release tag archive and checks that it
-matches the checkout before building/testing/installing the RPM. Only after
-validation succeeds does the release workflow send a tag-creation event to
-COPR. Prereleases are validated but do not trigger COPR. A failed validation
-prevents the webhook job from running. The release is validated independently
-of previous `main` runs, so COPR receives the tag that actually passed.
+`.github/workflows/copr-release.yml` runs when a stable release is published.
+It checks that the tag is `v<VERSION>` and queries the latest Fedora push run
+on `main` for the exact commit checked out from the release tag. Only a completed,
+successful run allows the COPR webhook. It does not rebuild the RPM or rerun tests.
+Prereleases are skipped. Missing, pending, failed, or cancelled validation blocks
+the webhook; finish or fix the Fedora validation, then rerun the release workflow.
+Publish releases after their commit passes validation on `main`. Pull-request
+validation alone does not qualify. GitHub API access uses the workflow token with
+`actions: read`; no additional secret is needed.
 
 COPR checks out the tag, reads its spec, and downloads the versioned archive
 to build the SRPM. A successful webhook request only means the request was
