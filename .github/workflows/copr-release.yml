@@ -6,16 +6,49 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  validate:
-    uses: ./.github/workflows/fedora.yml
-
   copr:
-    needs: validate
     if: github.event_name == 'release' && !github.event.release.prerelease
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+
+      - name: Check existing Fedora validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(cat VERSION)
+          if [[ "$RELEASE_TAG" != "v$version" ]]; then
+            echo "::error::Release tag must be v$version"
+            exit 1
+          fi
+
+          commit=$(git rev-parse HEAD)
+          gh api --method GET \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/fedora.yml/runs" \
+            -f head_sha="$commit" -f branch=main -f event=push \
+            -f per_page=100 > /tmp/fedora-runs.json
+
+          result=$(jq -r '
+            .workflow_runs
+            | sort_by(.run_number)
+            | last
+            | if . == null then "missing"
+              elif .status != "completed" then .status
+              else .conclusion
+              end
+          ' /tmp/fedora-runs.json)
+
+          if [[ "$result" != "success" ]]; then
+            echo "::error::Commit $commit has no successful Fedora push validation on main (status: $result). Wait for validation or fix it, then rerun this release workflow."
+            exit 1
+          fi
+
       - name: Notify COPR of the validated tag
         env:
           COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}
